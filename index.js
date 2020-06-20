@@ -79,12 +79,14 @@ mongoose.connect(
   { useNewUrlParser: true, useUnifiedTopology: true } // require to avoid deprecation warning
 );
 
+//const blogposts = await BlogPost.find({ title: /^How/ }) //search box
+
 // Client Side Setup
 // ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
 // rendering homepage
 app.get("/", async (req, res) => {
   const blogposts = await BlogPost.find({}); // retrieve all the blog posts from DB and assigning them to the variable
-  //console.log(blogposts);
+  console.log(blogposts);
   res.render("index", {
     blogposts, // we pass back the blogposts data back to the client browser by providing it as the 2 nd argument to render
   }); // With this, index.ejs view now has access to the blogposts variable.
@@ -119,8 +121,13 @@ app.post("/posts/store", async (req, res) => {
   res.redirect("/"); // after creating new blogpost rediret to homepage
 });
 
+// search functionality
+app.post("/query", async (req, res) => {
+  let query = req.body.search;
+  let blogposts = await BlogPost.find({ title: query }); //search box
+  res.send(blogposts);
+});
+
 app.listen(4000, () => {
   console.log("App listening on port 4000");
 });
-
-//force commit
