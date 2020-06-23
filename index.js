@@ -103,8 +103,11 @@ app.get("/contact", function (req, res) {
 });
 
 // blogposts page
-app.get("/post", function (req, res) {
-  res.render("post");
+app.get("/post/:id", async function (req, res) {
+  const blogpost = await BlogPost.findById(req.params.id);
+  res.render("post", {
+    blogpost,
+  });
 });
 
 // create new blog post page
@@ -122,10 +125,10 @@ app.post("/posts/store", async (req, res) => {
 });
 
 // search functionality
-app.post("/query", async (req, res) => {
+app.post("/", async (req, res) => {
   let query = req.body.search;
   let blogposts = await BlogPost.find({ title: query }); //search box
-  res.send(blogposts);
+  res.render("index", { blogposts });
 });
 
 app.listen(4000, () => {

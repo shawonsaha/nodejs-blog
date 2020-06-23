@@ -22,7 +22,7 @@
     </header>
 
     <!-- Search form -->
-    <form action="/query" method="POST">
+    <form action="/" method="POST">
       <div class="md-form mx-auto" style="width: 30%;">
         <input
           class="form-control"
@@ -52,8 +52,8 @@
             </a>
             <p class="post-meta">
               Posted by
-              <a href="#">Start Bootstrap</a>
-              on September 24, 2019
+              <a href="#"><%= blogposts[i].username %></a>
+              on <%= blogposts[i].datePosted.toDateString() %>
             </p>
           </div>
           <hr />
