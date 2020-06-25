@@ -51,6 +51,14 @@
 // Thus, we will loop through the blogposts array in a for loop and
 // render a <div class="post-preview"> tag for each blogpost
 
+// UPLOADING IMAGE
+// ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
+// install a package express-fileupload to help upload files in Express
+// https://www.npmjs.com/package/express-fileupload for the complete list of what it contains
+// npm install --save express-fileupload
+// const fileUpload = require('express-fileupload')
+// app.use(fileUpload())
+
 // Required Modules
 // ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
 const ejsLint = require("ejs-lint");
@@ -60,6 +68,7 @@ const BlogPost = require("./models/BlogPost"); // Database schema
 const path = require("path"); // to use absolute path '__direname'
 const ejs = require("ejs"); // we tell Express to use EJS as our templating engine
 const bodyParser = require("body-parser"); // to get req.body into json format
+const fileUpload = require("express-fileupload"); // express-fileupload package to help upload files in Express
 
 // Configurations
 // ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
@@ -71,6 +80,8 @@ app.use(express.static("public")); // register a public folder for serving stati
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+
+app.use(fileUpload()); // handle user upload files
 
 // MongoDB Atlas Connection
 // ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
@@ -86,7 +97,7 @@ mongoose.connect(
 // rendering homepage
 app.get("/", async (req, res) => {
   const blogposts = await BlogPost.find({}); // retrieve all the blog posts from DB and assigning them to the variable
-  console.log(blogposts);
+  //console.log(blogposts); // json array of all post stored in DB
   res.render("index", {
     blogposts, // we pass back the blogposts data back to the client browser by providing it as the 2 nd argument to render
   }); // With this, index.ejs view now has access to the blogposts variable.
@@ -115,20 +126,29 @@ app.get("/posts/new", function (req, res) {
   res.render("create");
 });
 
-// Send New Post to DB
+// Post a New article with image to DB
 // ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
 // POST is used to create records on servers
 app.post("/posts/store", async (req, res) => {
+  // req.files.image object contains certain properties like mv
+  // a function to move the file elsewhere on your server and name
+  let image = req.files.image;
+  // image.mv moves the uploaded file to public/img directory
+  // with the name from image.name
   // the following method is an asynchronous call
-  await BlogPost.create(req.body); // will await the completion of the current line before the below line can be executed
-  res.redirect("/"); // after creating new blogpost rediret to homepage
+  image.mv(path.resolve(__dirname, "public/img", image.name), async (error) => {
+    // ... is called Spread syntax (...) It helps to join req.body with second argument
+    await BlogPost.create({ ...req.body, image: "/img/" + image.name }); // will await the completion of the current line before the below line can be executed
+    //console.log(req.body); // req.body is JSON format of your new post { title: 'Your Title', body: 'Your Body' }
+    res.redirect("/"); // after creating new blogpost rediret to homepage
+  });
 });
 
 // search functionality
-app.post("/", async (req, res) => {
-  let query = req.body.search;
-  let blogposts = await BlogPost.find({ title: query }); //search box
-  res.render("index", { blogposts });
+app.post("/query", async (req, res) => {
+  let query = req.body.search; // user search input
+  let blogposts = await BlogPost.find({ title: query }); // query resutls return as an json array
+  res.render("index", { blogposts }); // render index page with query results
 });
 
 app.listen(4000, () => {
