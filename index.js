@@ -59,16 +59,50 @@
 // const fileUpload = require('express-fileupload')
 // app.use(fileUpload())
 
+// Middleware
+// ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
+// next() tells Express that the middleware is done and Express should call the  next middleware function.
+// If you remove next() and go to your app in the browser, the app will hang
+// as you have not told Express to proceed on to the next middleware function.
+// All middlewares called by app.use calls next()
+// Example:
+
+// const customMiddleWare = (req, res, next) => {
+//   console.log("Custom middle ware called");
+//   next();
+// };
+
+// app.use(customMiddleWare);
+
+// Now each time you refresh your app, the message 'Custom middle ware called' will be logged in the console
+
+// REFACTORING TO MVC
+// ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
+// Model represents the structure of the data, the format and the constraints with which it is stored.
+// In essence, it is the database part of the application.
+// View is what is presented to the user. Views make use of the Model and present data in a manner which the user wants.
+// From the view, user can make changes to the data presented to them. In our app, the View consist of static or dynamic pages
+// rendered to users. The pages are stored in a views folder storing various EJS files to render static and dynamic HTML websites.
+// Controller which controls the requests of the user and then generates appropriate response rendered back to the user.
+// That is, a user interacts with the View which generates the appropriate request which is handled by the Controller
+// which then renders the appropriate view with the Model data as a response
+
 // Required Modules
 // ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
-const ejsLint = require("ejs-lint");
+// const ejsLint = require("ejs-lint");
+// const ejs = require("ejs"); // we tell Express to use EJS as our templating engine
 const express = require("express");
 const mongoose = require("mongoose");
-const BlogPost = require("./models/BlogPost"); // Database schema
-const path = require("path"); // to use absolute path '__direname'
-const ejs = require("ejs"); // we tell Express to use EJS as our templating engine
 const bodyParser = require("body-parser"); // to get req.body into json format
 const fileUpload = require("express-fileupload"); // express-fileupload package to help upload files in Express
+
+// Controllers
+// ‾‾‾‾‾‾‾‾‾‾‾‾
+const homeController = require("./controllers/home"); // render homepage with submitted posts fetching form DB
+const newPostController = require("./controllers/newPost"); // render create a new post page (static)
+const storePostController = require("./controllers/storePost"); // controlls submitted post sending into DB
+const getPostController = require("./controllers/getPost"); // fetch and render individual post from DB
+const searchPostController = require("./controllers/searchPost"); // render user query into a new page
 
 // Configurations
 // ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
@@ -83,6 +117,17 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 app.use(fileUpload()); // handle user upload files
 
+//Custom Middlewares
+// ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
+const validateMiddleWare = require("./middleware/validateMiddleware");
+
+// If we apply the middleware to our application using app.use(validateMiddleWare),
+// this middleware will be executed for all request whereas we only want it to be executed for the request to create posts.
+// Thus, to apply middleware for specific url requests, we do: "/posts/store" as first argument
+// if Express sees a request from the given url ‘/posts/store’ , then execute the middleware validateMiddleWare
+// Note: make sure the middleware is after app.use(fileUpload()) since we depend on the req object having the files property.
+app.use("/posts/store", validateMiddleWare);
+
 // MongoDB Atlas Connection
 // ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
 mongoose.connect(
@@ -90,67 +135,25 @@ mongoose.connect(
   { useNewUrlParser: true, useUnifiedTopology: true } // require to avoid deprecation warning
 );
 
-//const blogposts = await BlogPost.find({ title: /^How/ }) //search box
+// Client Side Controllers
+// ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
 
-// Client Side Setup
-// ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
 // rendering homepage
-app.get("/", async (req, res) => {
-  const blogposts = await BlogPost.find({}); // retrieve all the blog posts from DB and assigning them to the variable
-  //console.log(blogposts); // json array of all post stored in DB
-  res.render("index", {
-    blogposts, // we pass back the blogposts data back to the client browser by providing it as the 2 nd argument to render
-  }); // With this, index.ejs view now has access to the blogposts variable.
-});
+app.get("/", homeController);
 
-// about page
-app.get("/about", function (req, res) {
-  res.render("about");
-});
+// publish a new blogpost page
+app.get("/posts/new", newPostController);
 
-// contact page
-app.get("/contact", function (req, res) {
-  res.render("contact");
-});
+// Send a New article with title, body and image to DB
+app.post("/posts/store", storePostController);
 
-// blogposts page
-app.get("/post/:id", async function (req, res) {
-  const blogpost = await BlogPost.findById(req.params.id);
-  res.render("post", {
-    blogpost,
-  });
-});
-
-// create new blog post page
-app.get("/posts/new", function (req, res) {
-  res.render("create");
-});
-
-// Post a New article with image to DB
-// ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
-// POST is used to create records on servers
-app.post("/posts/store", async (req, res) => {
-  // req.files.image object contains certain properties like mv
-  // a function to move the file elsewhere on your server and name
-  let image = req.files.image;
-  // image.mv moves the uploaded file to public/img directory
-  // with the name from image.name
-  // the following method is an asynchronous call
-  image.mv(path.resolve(__dirname, "public/img", image.name), async (error) => {
-    // ... is called Spread syntax (...) It helps to join req.body with second argument
-    await BlogPost.create({ ...req.body, image: "/img/" + image.name }); // will await the completion of the current line before the below line can be executed
-    //console.log(req.body); // req.body is JSON format of your new post { title: 'Your Title', body: 'Your Body' }
-    res.redirect("/"); // after creating new blogpost rediret to homepage
-  });
-});
+// blogpost article page
+app.get("/post/:id", getPostController);
 
 // search functionality
-app.post("/query", async (req, res) => {
-  let query = req.body.search; // user search input
-  let blogposts = await BlogPost.find({ title: query }); // query resutls return as an json array
-  res.render("index", { blogposts }); // render index page with query results
-});
+app.post("/query", searchPostController);
 
+// Localhost
 app.listen(4000, () => {
   console.log("App listening on port 4000");
 });
