@@ -76,6 +76,12 @@
 
 // Now each time you refresh your app, the message 'Custom middle ware called' will be logged in the console
 
+// Password Encryption
+// ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
+// install a package called bcrypt (https://www.npmjs.com/package/bcrypt) to help us hash passwords
+// Install it using: npm i --save bcrypt
+// Then add/require this module in User.js (DB model)
+
 // REFACTORING TO MVC
 // ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
 // Model represents the structure of the data, the format and the constraints with which it is stored.
@@ -140,7 +146,7 @@ app.use("/posts/store", validateMiddleWare);
 // ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
 mongoose.connect(
   "mongodb+srv://shawonsaha:5DnUZBV4nHr3z8pw@nodefcc-wxnma.mongodb.net/blog?retryWrites=true&w=majority",
-  { useNewUrlParser: true, useUnifiedTopology: true } // require to avoid deprecation warning
+  { useNewUrlParser: true, useUnifiedTopology: true, useCreateIndex: true } // require to avoid deprecation warning
 );
 
 // Client Side Controllers
