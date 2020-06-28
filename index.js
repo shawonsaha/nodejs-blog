@@ -87,6 +87,11 @@
 // That is, a user interacts with the View which generates the appropriate request which is handled by the Controller
 // which then renders the appropriate view with the Model data as a response
 
+// User Model
+// ‾‾‾‾‾‾‾‾‾‾‾‾
+// For user registration, we need a user model to represent our Users collection just as what we had for BlogPost.
+// In models folder, create a new file User.js and copy/edit contents from BlogPost.js to create the User schema:
+
 // Required Modules
 // ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
 // const ejsLint = require("ejs-lint");
@@ -99,10 +104,13 @@ const fileUpload = require("express-fileupload"); // express-fileupload package 
 // Controllers
 // ‾‾‾‾‾‾‾‾‾‾‾‾
 const homeController = require("./controllers/home"); // render homepage with submitted posts fetching form DB
+const newUserController = require("./controllers/newUser"); // render signup / register page
 const newPostController = require("./controllers/newPost"); // render create a new post page (static)
-const storePostController = require("./controllers/storePost"); // controlls submitted post sending into DB
 const getPostController = require("./controllers/getPost"); // fetch and render individual post from DB
+const storePostController = require("./controllers/storePost"); // controlls submitted post sending into DB
 const searchPostController = require("./controllers/searchPost"); // render user query into a new page
+
+const storeUserController = require("./controllers/storeUser");
 
 // Configurations
 // ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
@@ -141,6 +149,9 @@ mongoose.connect(
 // rendering homepage
 app.get("/", homeController);
 
+// signup / register page
+app.get("/auth/register", newUserController);
+
 // publish a new blogpost page
 app.get("/posts/new", newPostController);
 
@@ -152,6 +163,9 @@ app.get("/post/:id", getPostController);
 
 // search functionality
 app.post("/query", searchPostController);
+
+//
+app.post("/users/register", storeUserController);
 
 // Localhost
 app.listen(4000, () => {
