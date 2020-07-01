@@ -18,12 +18,24 @@
         <li class="nav-item">
           <a class="nav-link" href="/">Home</a>
         </li>
+        <!-- if user logged in then show create post option on navbar instead of 'login' and 'signup' -->
+        <% if(loggedIn) { %>
         <li class="nav-item">
           <a class="nav-link" href="/posts/new">New Post</a>
         </li>
         <li class="nav-item">
+          <a class="nav-link" href="/auth/logout">Logout</a>
+        </li>
+        <% } %>
+        <!-- if loggedIn is null in then show signup or login option -->
+        <% if(!loggedIn) { %>
+        <li class="nav-item">
           <a class="nav-link" href="/auth/register">New User</a>
         </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/auth/login">Login</a>
+        </li>
+        <% } %>
       </ul>
     </div>
   </div>

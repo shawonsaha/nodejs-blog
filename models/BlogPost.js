@@ -18,7 +18,9 @@ const BlogPostSchema = new Schema({
     type: Date,
     default: new Date(),
   },
-  image: String,
+  image: {
+    type: String,
+  },
 });
 
 // We access the database via mongoose.model. The first argument is the singular name of the collection your model is for
