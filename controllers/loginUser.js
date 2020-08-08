@@ -13,6 +13,10 @@
 // If the passwords match, we redirect to the home page where you can see the
 // list of blog posts. If the passwords don ’ t match, we redirect back to the login page.
 
+// We assign the user _id to the session. The session package saves this data on the user ’ s browser
+// so that each time the user makes a request, this cookie will be sent back to the server with the
+// authenticated id. This is how we know if a user is logged in.
+
 const bcrypt = require("bcrypt");
 const User = require("../models/User");
 module.exports = (req, res) => {
@@ -23,6 +27,7 @@ module.exports = (req, res) => {
         if (same) {
           // if passwords match
           // store user session, will talk about it later
+          req.session.userId = user._id;
           res.redirect("/");
         } else {
           res.redirect("/auth/login");

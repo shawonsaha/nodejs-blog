@@ -98,6 +98,22 @@
 // For user registration, we need a user model to represent our Users collection just as what we had for BlogPost.
 // In models folder, create a new file User.js and copy/edit contents from BlogPost.js to create the User schema:
 
+// Session/Cookies
+// ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
+// Sessions are how we keep the user logged into our web app by keeping their
+// information in the browser. Each time a user makes a request, information of
+// that user is sent back to the server. The server thus knows which user is
+// making that request and if they are logged in or out. The information kept on
+// the user ’ s browser is called cookies.
+// To implement Express sessions, we install a middleware package called
+// express-session (https://github.com/expressjs/session):
+// npm install --save express-session
+
+// Conditionally Display New Post, Login and New User links on navbar
+// ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
+// other than redirecting to the home page whenever a logged in user clicks on Login or ‘ new user ’ ,
+// we should hide the new user and login links if a user is already logged in.
+
 // Required Modules
 // ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
 // const ejsLint = require("ejs-lint");
@@ -106,6 +122,7 @@ const express = require("express");
 const mongoose = require("mongoose");
 const bodyParser = require("body-parser"); // to get req.body into json format
 const fileUpload = require("express-fileupload"); // express-fileupload package to help upload files in Express
+const expressSession = require("express-session"); // save session/cookies in browser for authentication
 
 // Controllers
 // ‾‾‾‾‾‾‾‾‾‾‾‾
@@ -118,6 +135,7 @@ const searchPostController = require("./controllers/searchPost"); // render user
 const storeUserController = require("./controllers/storeUser"); // store registered user in db
 const loginController = require("./controllers/login"); // render login page
 const loginUserController = require("./controllers/loginUser"); // take login credential and decide to give access
+const logoutController = require("./controllers/logout"); // destroy current user session
 
 // Configurations
 // ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
@@ -132,16 +150,44 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 app.use(fileUpload()); // handle user upload files
 
+// we register the expressSession middleware in our app and pass in a configuration object
+// with a value to secret property. secret string is used by the express-session package to sign and encrypt
+// the session ID cookie being shared with the browser.
+
+app.use(
+  expressSession({
+    secret: "keyboard cat",
+  })
+);
+
 //Custom Middlewares
 // ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
 const validateMiddleWare = require("./middleware/validateMiddleware");
-
 // If we apply the middleware to our application using app.use(validateMiddleWare),
 // this middleware will be executed for all request whereas we only want it to be executed for the request to create posts.
 // Thus, to apply middleware for specific url requests, we do: "/posts/store" as first argument
 // if Express sees a request from the given url ‘/posts/store’ , then execute the middleware validateMiddleWare
 // Note: make sure the middleware is after app.use(fileUpload()) since we depend on the req object having the files property.
 app.use("/posts/store", validateMiddleWare);
+
+const authMiddleware = require("./middleware/authMiddleware");
+// can see it as a pipeline going from left to right, we call authMiddleware before calling newPostController.
+app.get("/posts/new", authMiddleware, newPostController);
+
+const redirectIfAuthenticatedMiddleware = require("./middleware/redirectIfAuthenticatedMiddleware");
+// Now when you are logged in, you will be redirected to the home page when you click on Login or New User.
+app.get("/auth/register", redirectIfAuthenticatedMiddleware, newUserController);
+app.post(
+  "/users/register",
+  redirectIfAuthenticatedMiddleware,
+  storeUserController
+);
+app.get("/auth/login", redirectIfAuthenticatedMiddleware, loginController);
+app.post(
+  "/users/login",
+  redirectIfAuthenticatedMiddleware,
+  loginUserController
+);
 
 // MongoDB Atlas Connection
 // ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
@@ -152,6 +198,17 @@ mongoose.connect(
 
 // Client Side Controllers
 // ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
+
+// We first declare a global variable loggedIn that will be accessible from all our EJS files.
+// Because the nav bar exist in all our EJS files, each have to access loggedIn to alter the navigation bar.
+global.loggedIn = null;
+
+// With app.use("*", (req, res, next) => ... , we specify with the wildcard *, that on all requests,
+// this middleware should be executed. In it, we assign loggedIn to req.session.userId.
+app.use("*", (req, res, next) => {
+  loggedIn = req.session.userId;
+  next();
+});
 
 // rendering homepage
 app.get("/", homeController);
@@ -179,6 +236,13 @@ app.post("/users/register", storeUserController);
 
 // control whom to give access
 app.post("/users/login", loginUserController);
+
+// destroy current user session and redirect to home
+app.get("/auth/logout", logoutController);
+
+// 404 page fon non-existing route
+// Express will go through all the routes and if it can't find matches any above, it render the not found page
+app.use((req, res) => res.render("notfound"));
 
 // Localhost
 app.listen(4000, () => {
